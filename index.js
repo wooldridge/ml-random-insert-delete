@@ -3,7 +3,9 @@ var config = require('./config'),
 
 var db,
     duration,
+    d,
     currTime,
+    currFmt,
     endTime,
     pause,
     query,
@@ -11,21 +13,33 @@ var db,
     showTimes,
     insertDoc,
     deleteDoc,
-    getDoc;
+    run,
+    rnd;
 
 db = marklogic.createDatabaseClient(config.marklogic);
 
 duration = parseInt(process.argv[2]); // time to run in seconds
 
 setTimes = function () {
-  currTime = Math.floor(Date.now() / 1000);
-  pause = Math.round(Math.random() * 10000);
+  d = new Date();
+  currTime = Math.floor(d.getTime() / 1000);
+  currFmt =
+    d.getFullYear() +'-'+
+    ('0' + (d.getMonth()+1)).slice(-2) +'-'+
+    ('0' + d.getDate()).slice(-2) + '_' +
+    ('0' + d.getHours()).slice(-2) + '-' +
+    ('0' + d.getMinutes()).slice(-2) + '-' +
+    ('0' + d.getSeconds()).slice(-2);
+  pause = Math.round(
+            (config.pause +
+            (config.padding * (Math.random() - 0.5))) * 1000
+          );
 }
 
 showTimes = function () {
-  console.log('currTime: ' + currTime);
-  console.log('secs until end: ' + (endTime - currTime));
-  console.log('pause: ' + pause);
+  console.log('Current Time:   ' + currFmt);
+  console.log('Secs until end: ' + (endTime - currTime));
+  console.log('Next pause:     ' + pause/1000);
 }
 
 insertDoc = function (uri) {
@@ -36,7 +50,7 @@ insertDoc = function (uri) {
   }).result(
     function(response) {
       response.documents.forEach( function(document) {
-        console.log('Inserted:  ' + document.uri);
+        console.log('Inserted:       ' + document.uri);
       });
     },
     function(error) {
@@ -45,20 +59,7 @@ insertDoc = function (uri) {
   );
 }
 
-deleteDoc = function (uri) {
-  db.documents.remove({
-    uri: uri
-  }).result(
-    function(response) {
-      console.log('Deleted:  ' + response.uri);
-    },
-    function(error) {
-      console.log(JSON.stringify(error, null, 2));
-    }
-  );
-}
-
-getDoc = function (callback) {
+deleteDoc = function () {
   q = marklogic.queryBuilder;
   db.documents.query(
     q.where(
@@ -68,7 +69,16 @@ getDoc = function (callback) {
     function(response) {
       if (response.length > 0) {
         response.forEach( function(document) {
-          callback(document.uri);
+          db.documents.remove({
+            uri: document.uri
+          }).result(
+            function(response) {
+              console.log('Deleted:        ' + response.uri);
+            },
+            function(error) {
+              console.log(JSON.stringify(error, null, 2));
+            }
+          );
         });
       }
     },
@@ -78,18 +88,19 @@ getDoc = function (callback) {
   );
 }
 
-function run() {
-  if ((pause % 2) == 1) {
-    insertDoc(currTime + '.json');
-  } else {
-    getDoc(deleteDoc);
-  }
+run = function () {
   setTimeout(function(){
     if (currTime > endTime) {
       process.exit();
     } else {
-      setTimes();
       showTimes();
+      rnd = Math.random();
+      if (rnd < config.ratio) {
+        insertDoc(currFmt + '.json');
+      } else {
+        deleteDoc();
+      }
+      setTimes();
       run();
     }
   }, pause);
