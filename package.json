@@ -1,0 +1,18 @@
+{
+  "name": "ml-random-insert-delete",
+  "version": "0.0.1",
+  "description": "Script that randomly inserts and deletes documents from a MarkLogic database over time.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mike Wooldridge",
+  "license": "ISC",
+  "dependencies": {
+    "marklogic": "^1.0.4"
+  },
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/wooldridge/ml-random-insert-delete"
+  }
+}
